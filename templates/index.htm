@@ -37,8 +37,8 @@
   <div class = "center">
     
     <h3>Popular San Francisco Tree Species</h3>
-    <p>The map below shows the top 11 tree species in San Francisco on the map by neighborhood. One can see the groupings of these species and where they occupy by neighborhood.</p>
-    <p>The top 12 tree species in San Francisco represent 17,167 trees out of the 37,119. These 12 species represent 46% of the trees in San Francisco. </p>
+    <p>The map below shows the top 12 tree species in San Francisco on the map by neighborhood. One can see the groupings of these species and where they occupy by neighborhood.</p>
+    <p>The top 12 tree species in San Francisco represent 17,167 trees out of the 37,119. These 12 species of 404 species represent 46% of the trees in San Francisco. </p>
     <svg id="choropleth" height="600" width="800" ></svg>
     <h5> LEGEND</h5>
     <p>Species (# of trees)</p>
@@ -46,10 +46,10 @@
   </div>
   <h5> Bar Chart of Top 11 Tree Species in San Francisco</h5>
   <svg id="barChart" height="600" width="1100"></svg>
-  <h3> Line Charts of Top 3 Tree Species in San Francisco: # of Trees vs Year</h3>
+  <h3> Line Charts of Top 3 Tree Species Planted Over Time in San Francisco: # of Trees vs Year</h3>
   <svg id="lineplot0" height="500" width="800" ></svg>
-  <svg id="lineplot1" height="500" width="800" style="margin-top:50px" ></svg>
-  <svg id="lineplot2" height="500" width="800" style="margin-top:50px" ></svg>
+  <svg id="lineplot1" height="500" width="800" ></svg>
+  <svg id="lineplot2" height="500" width="800" ></svg>
 
   <script id="treemap">
     const mapsvg = d3.select("#choropleth");
@@ -63,7 +63,7 @@
     
     const requestTreeMap = async function() {
 
-      const sf = await d3.json("SF-Neighborhoods.geo.json");
+      const sf = await d3.json("../static/SF-Neighborhoods.geo.json");
       console.log(sf);
 
       var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);    
@@ -71,7 +71,6 @@
       var projection = d3.geoAlbersUsa().fitSize([mapAreaWidth, mapAreaHeight], neighborhoods);
       var path = d3.geoPath().projection(projection);
       console.log(neighborhoods);
-      console.log(neighborhoodsMesh);
 
       map.selectAll("path.state").data(neighborhoods.features)
          .join("path")
@@ -83,7 +82,7 @@
          .attr("class","outline")
          .attr("d", path);
       
-      var treeData = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
+      var treeData = await d3.csv("../static/Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
       console.log(treeData)
 
       var filteredTreeData = [];
@@ -228,7 +227,7 @@
     };
 
     const requestTimeLine = async function(colorScale) {
-    var treeData = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
+    var treeData = await d3.csv("../static/Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
     console.log(treeData)
     let treeSpeciesRow = {}
     treeData.forEach( row => {
@@ -260,11 +259,9 @@
       const speciesName = speciesList[i][0]
       makeLineChart(speciesName, i, treeData, colorScale)
     }
-
     };
     function makeLineChart(speciesName, index, treeData, colorScale){
       const svgName = "svg#lineplot"+index
-      console.log(svgName)
       const svg = d3.select(svgName);
       const width = svg.attr("width");
       const height = svg.attr("height");
@@ -313,7 +310,6 @@
       const amountScale = d3.scaleLinear().domain(num).range([chartHeight, 0]);
       const dateExtent = d3.extent(keysInt);
       const dateScale = d3.scaleLinear().domain(dateExtent).range([0,chartWidth]);
-      console.log(dateExtent)
 
       let leftAxis = d3.axisLeft(amountScale)
       let leftGridlines = d3.axisLeft(amountScale)
@@ -358,6 +354,8 @@
       let title = "Number of "+speciesName + ' Species Trees Planted';
       svg.append('text').text(title).attr('x', 20).attr('y', 20);
     }
+
+   
     requestTreeMap();
   </script>
 

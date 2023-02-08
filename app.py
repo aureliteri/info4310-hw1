@@ -10,8 +10,8 @@ app.wsgi_app = WhiteNoise(app.wsgi_app,
 
 
 @app.route('/', methods=['GET'])
-def hello():
-    return make_response("Hello, world!!!!!!!!!!!!!!!!")
+def index():
+    return render_template('index.htm')
 
 
 if __name__ == "__main__":
