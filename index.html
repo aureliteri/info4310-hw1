@@ -38,6 +38,7 @@
     
     <h3>Popular San Francisco Tree Species</h3>
     <p>The map below shows the top 11 tree species in San Francisco on the map by neighborhood. One can see the groupings of these species and where they occupy by neighborhood.</p>
+    <p>The top 12 tree species in San Francisco represent 17,167 trees out of the 37,119. These 12 species represent 46% of the trees in San Francisco. </p>
     <svg id="choropleth" height="600" width="800" ></svg>
     <h5> LEGEND</h5>
     <p>Species (# of trees)</p>
@@ -46,8 +47,7 @@
   <h5> Bar Chart of Top 11 Tree Species in San Francisco</h5>
   <svg id="barChart" height="600" width="1100"></svg>
 
-  <svg id="byNeighborhood" height="600" width="800"></svg>
-
+  <svg id="lineplot" height="500" width="800" style="margin-top:50px" ></svg>
 
   <script id="treemap">
     const mapsvg = d3.select("#choropleth");
@@ -64,8 +64,8 @@
       const sf = await d3.json("SF-Neighborhoods.geo.json");
       console.log(sf);
 
-      var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);     // List of neighborhoods outlines to fill
-      var neighborhoodsMesh = topojson.mesh(sf, sf.objects.SFNeighborhoods);    // 'Mesh' of all outlines put together for a stroke
+      var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);    
+      var neighborhoodsMesh = topojson.mesh(sf, sf.objects.SFNeighborhoods);  
       var projection = d3.geoAlbersUsa().fitSize([mapAreaWidth, mapAreaHeight], neighborhoods);
       var path = d3.geoPath().projection(projection);
       console.log(neighborhoods);
@@ -111,7 +111,7 @@
       console.log(Object.keys(treeSpeciesRow).length)
 
       Object.keys(treeSpeciesRow).forEach(function(key) {
-          if (treeSpeciesRow[key] < 800){
+          if (treeSpeciesRow[key] < 785){
             delete treeSpeciesRow[key]
           }
       });
@@ -135,9 +135,8 @@
         }
       });
       
-      const turbo = ["#23171b","#4a58dd","#2f9df5","#27d7c4","#4df884","#95fb51","#dedd32","#ffa423","#f65f18","#ba2208","#900c00"]
-      const colors = ["#6e40aa","#bf3caf","#fe4b83","#ff7847","#e2b72f","#aff05b","#52f667","#1ddfa3","#23abd8","#4c6edb","#6e40aa"]
-      console.log(colors.length, turbo.length)
+      const turbo = ["#900f00", "#ba2208", "#fe4b83", "#f65f18", "#ffa423", "#dedd32", "#95fb51", "#4df884", "#27d7c4", "#2f9df5", "#6e40aa", "#23171b"]
+      // const colors = [,,,"#ff7847","#e2b72f","#aff05b","#52f667","#1ddfa3","#23abd8","#4c6edb","#6e40aa"]
 
       const colorScale = d3.scaleOrdinal()
                           .domain(Array.from(filteredTreeData))
@@ -163,7 +162,6 @@
 
     requestBar(speciesList, colorScale);
     requestTrees(sf, filteredTreeData, speciesList, colorScale);
-
     };
 
     function requestBar (speciesList, colorScale) {
@@ -236,11 +234,62 @@
         .attr("y2",yScale( yPt))
         .style("stroke", colorScale(xPt) )
         .style("stroke-width", 40);
+
+        chartArea.append("text")
+        .attr("text-anchor","middle")
+        .attr("font-size","10px")
+        .attr("x",xScale( xPt ) + 45)
+        .attr('y',yScale( yPt)- 10)
+        .text(yPt);
       });      
     };
 
-    requestTreeMap();
+    const requestTimeLine = async function() {
+    var treeData = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
+    console.log(treeData)
+
+    const svg = d3.select("svg#lineplot");
+    const width = svg.attr("width");
+    const height = svg.attr("height");
+    const margins = {top: 10, right: 10, bottom: 50, left: 50};
+    const chartWidth = width - margins.left - margins.right;
+    const chartHeight = height - margins.top - margins.bottom;
+
+    let annotations = svg.append("g").attr("id","annotations");
+    let chartArea = svg.append("g").attr("id","points")
+                    .attr("transform",`translate(${margins.left},${margins.top})`);
+
     
+    const timeParser = d3.timeParse("%m/%d/%Y");
+    treeData.forEach( d => {
+      if (d["PlantDate"] != null && d["PlantDate"] != ""){
+        let splitText = d["PlantDate"].split(" ")
+        splitText = splitText[0]
+        splitText = splitText.split("/")
+        if (splitText[0].length == 1 ){
+          splitText[0] = "0"+splitText[0]
+        }
+        if (splitText[1].length == 1 ){
+          splitText[1] = "0"+splitText[1]
+        }
+        if (parseInt(splitText[2]) >=55){
+          splitText[2] = "19"+splitText[2]
+        }
+        else if (parseInt(splitText[2]) >= 0 && parseInt(splitText[2])<55){
+          splitText[2] = "20"+splitText[2]
+        }
+        let date = splitText.join('/')
+        d['date'] = timeParser(date);
+        d['year'] = d['date'].getFullYear()
+
+        console.log(d["year"])
+      }
+    });
+
+
+    };
+    requestTreeMap();
+    requestTimeLine();
   </script>
 
 
