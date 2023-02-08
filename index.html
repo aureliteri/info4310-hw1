@@ -36,8 +36,6 @@
   <h3>Amy Ouyang (aco49)</h3>
   <div class = "center">
     
-    <!-- <h4>San Francisco Tree Species</h4>
-    <svg id="choropleth_neigh" height="600" width="800" ></svg> -->
     <h3>Popular San Francisco Tree Species</h3>
     <p>The map below shows the top 11 tree species in San Francisco on the map by neighborhood. One can see the groupings of these species and where they occupy by neighborhood.</p>
     <svg id="choropleth" height="600" width="800" ></svg>
@@ -220,7 +218,6 @@
                     .call(bottomAxis)
                     .selectAll("text")  
                     .style("text-anchor", "center")
-                    // .attr("dx", "1em")
                     .attr("dy", "2em")
                     .attr("transform", "rotate(-15)");
 
@@ -242,83 +239,6 @@
       });      
     };
 
-  function requestTrees(sf, treeData, speciesList, colorScale) {
-    console.log("BY NEIGH")
-    const mapsvgneigh = d3.select("#byNeighborhood");
-    const mapNeigh = mapsvgneigh.append("g")
-                    .attr("transform","translate("+mapMargin.left+","+mapMargin.top+")");
-
-    var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);     // List of neighborhoods outlines to fill
-    var neighborhoodsMesh = topojson.mesh(sf, sf.objects.SFNeighborhoods);    // 'Mesh' of all outlines put together for a stroke
-    var projection = d3.geoAlbersUsa().fitSize([mapAreaWidth, mapAreaHeight], neighborhoods);
-    var path = d3.geoPath().projection(projection);
-
-    mapNeigh.selectAll("path.state").data(neighborhoods.features)
-      .join("path")
-      .attr("class", "neighborhood")
-      .attr("note", d => d.id)
-      .attr("d", path);
-      
-    mapNeigh.append("path").datum(neighborhoodsMesh)
-      .attr("class","outline")
-      .attr("d", path);
-      
-    // let circles = mapNeigh.selectAll("circle.point").data(treeData)
-    //                         .join("circle")
-    //                         .attr("class", "point")
-    //                         .attr("opacity", 0.8)
-    //                         .attr("cx", d => projection([parseFloat(d.Longitude) , parseFloat(d.Latitude)])[0])
-    //                         .attr("cy", d => projection([parseFloat(d.Longitude) , parseFloat(d.Latitude)])[1])
-    //                         .attr("r", 1)
-    //                         .attr("fill", d => 'green'); 
-
-
-    let neighborhoodsTreeCounts = {}; 
-    let neighborhoodPolygons = {};
-    let treePointList = [];
-
-    neighborhoods.features.forEach( neighborhood =>{
-      neighborhoodPolygons[neighborhood.properties.name] = neighborhood.geometry;
-    })
-    console.log(neighborhoodPolygons)
-
-    let neighborhoodNames = Object.keys(neighborhoodPolygons)
-
-    treeData.forEach( row => {
-      let tree_point = projection([parseFloat(row.Longitude) , parseFloat(row.Latitude)]);
-      treePointList.push(tree_point);
-      for (const [name, polygon] of Object.entries(neighborhoodPolygons)) {
-        console.log(polygon.coordinates)
-        // console.log(d3.polygonContains(polygon.coordinates,[tree_point]))
-        // if (d3.polygonContains(polygon.coordinates,[tree_point])){
-        //   console.log("yay")
-        // }
-    }
-    });
-
-    
-    // for (const [name, polygon] of Object.entries(neighborhoodPolygons)) {
-    //   // console.log(polygon.coordinates)
-    //   treeData.forEach( row => {
-    //   var tree_point = projection([parseFloat(row.Longitude) , parseFloat(row.Latitude)])
-    //   console.log(d3.polygonContains(polygon.coordinates, tree_point));
-    //     if (d3.polygonContains(polygon.coordinates, tree_point)){
-    //       var index = treePointList.indexOf(tree_point);
-    //         if (index !== -1) {
-    //           treePointList.splice(index, 1);
-    //         }
-    //         if (name in neighborhoodsTreeCounts){
-    //           var value = neighborhoodsTreeCounts.get(name)
-    //           const newObj = Object.assign({}, neighborhoodsTreeCounts, {name : value + 1});
-    //         }
-    //         else{
-    //           neighborhoodsTreeCounts.name = 1
-    //         }
-    //     }
-    //   }
-    //   )
-    // }
-  };
     requestTreeMap();
     
   </script>
