@@ -1,0 +1,328 @@
+<html>
+<head>
+  <script src="https://d3js.org/d3.v7.min.js"></script> 
+  <script src="https://d3js.org/topojson.v3.min.js"></script>
+  <style>
+      .center {
+        margin: auto;
+        width: 50%;
+        text-align: center;
+      }
+      .gridlines line {
+        stroke: rgb(186, 182, 182);
+      }
+
+      .gridlines .domain {
+        stroke: none;
+      }
+      
+      .neighborhood {
+        fill: rgb(249, 248, 248);
+      }
+      .outline {
+        stroke: black;
+        stroke-width: 1px;
+        fill: none;
+      }
+
+      #colorLegend span {
+      margin-right: 10px;
+    }
+    </style>
+</head>
+
+<body>
+  <h3>INFO 4310 HW 1</h3>
+  <h3>Amy Ouyang (aco49)</h3>
+  <div class = "center">
+    
+    <!-- <h4>San Francisco Tree Species</h4>
+    <svg id="choropleth_neigh" height="600" width="800" ></svg> -->
+    <h3>Popular San Francisco Tree Species</h3>
+    <p>The map below shows the top 11 tree species in San Francisco on the map by neighborhood. One can see the groupings of these species and where they occupy by neighborhood.</p>
+    <svg id="choropleth" height="600" width="800" ></svg>
+    <h5> LEGEND</h5>
+    <p>Species (# of trees)</p>
+    <div id="colorLegend"></div>
+  </div>
+  <h5> Bar Chart of Top 11 Tree Species in San Francisco</h5>
+  <svg id="barChart" height="600" width="1100"></svg>
+
+  <svg id="byNeighborhood" height="600" width="800"></svg>
+
+
+  <script id="treemap">
+    const mapsvg = d3.select("#choropleth");
+    const mapWidth = mapsvg.attr("width");
+    const mapHeight = mapsvg.attr("height");
+    const mapMargin = { top: 20, right: 20, bottom: 20, left:0};
+    const mapAreaWidth = mapWidth - mapMargin.left - mapMargin.right;
+    const mapAreaHeight = mapHeight - mapMargin.top - mapMargin.bottom;
+    const map = mapsvg.append("g")
+                    .attr("transform","translate("+mapMargin.left+","+mapMargin.top+")");
+    
+    const requestTreeMap = async function() {
+
+      const sf = await d3.json("SF-Neighborhoods.geo.json");
+      console.log(sf);
+
+      var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);     // List of neighborhoods outlines to fill
+      var neighborhoodsMesh = topojson.mesh(sf, sf.objects.SFNeighborhoods);    // 'Mesh' of all outlines put together for a stroke
+      var projection = d3.geoAlbersUsa().fitSize([mapAreaWidth, mapAreaHeight], neighborhoods);
+      var path = d3.geoPath().projection(projection);
+      console.log(neighborhoods);
+      console.log(neighborhoodsMesh);
+
+      map.selectAll("path.state").data(neighborhoods.features)
+         .join("path")
+         .attr("class", "neighborhood")
+         .attr("note", d => d.id)
+         .attr("d", path);
+         
+      map.append("path").datum(neighborhoodsMesh)
+         .attr("class","outline")
+         .attr("d", path);
+      
+      var treeData = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
+      console.log(treeData)
+      var filteredTreeData = [];
+
+      let neighborhoodPolygons = {};
+      let treePointList = [];
+
+      neighborhoods.features.forEach( neighborhood =>{
+        neighborhoodPolygons[neighborhood.properties.name] = neighborhood.geometry;
+      })
+
+      let neighborhoodNames = Object.keys(neighborhoodPolygons)
+      var treeSpeciesRow = {}
+      
+      treeData.forEach( row => {
+        let tree_point = projection([parseFloat(row.Longitude) , parseFloat(row.Latitude)]);
+        treePointList.push(tree_point);
+        row['qSpecies'] = row['qSpecies'].split('::')[1]
+        var species = row['qSpecies']
+        if (species in treeSpeciesRow ){
+          var val = treeSpeciesRow[species]
+          treeSpeciesRow[species] = val + 1
+        }
+        else {
+          treeSpeciesRow[species] = 1
+        }
+      });
+      console.log(Object.keys(treeSpeciesRow).length)
+
+      Object.keys(treeSpeciesRow).forEach(function(key) {
+          if (treeSpeciesRow[key] < 800){
+            delete treeSpeciesRow[key]
+          }
+      });
+      var speciesList = Object.keys(treeSpeciesRow).map(function(key) {
+        return [key, treeSpeciesRow[key]];
+      });
+
+      speciesList.sort(function(first, second) {
+        return second[1] - first[1];
+      });
+      console.log(speciesList)
+
+      treeData.forEach( row => {
+        var temp_dict = {}
+        if (row['qSpecies'] in treeSpeciesRow ){
+          temp_dict['TreeID'] = row['TreeID']
+          temp_dict['qSpecies'] = row['qSpecies']
+          temp_dict['Latitude'] = row['Latitude']
+          temp_dict['Longitude'] = row['Longitude']
+          filteredTreeData.push(temp_dict)
+        }
+      });
+      
+      const turbo = ["#23171b","#4a58dd","#2f9df5","#27d7c4","#4df884","#95fb51","#dedd32","#ffa423","#f65f18","#ba2208","#900c00"]
+      const colors = ["#6e40aa","#bf3caf","#fe4b83","#ff7847","#e2b72f","#aff05b","#52f667","#1ddfa3","#23abd8","#4c6edb","#6e40aa"]
+      console.log(colors.length, turbo.length)
+
+      const colorScale = d3.scaleOrdinal()
+                          .domain(Array.from(filteredTreeData))
+                          .range(turbo);
+
+      speciesList.forEach(item => {   
+        console.log(item)    
+        d3.select("#colorLegend")
+        .append("span")
+        .style("fill", "#000")
+        .text(item[0]+ "  ("+item[1]+")")
+        .style("color", colorScale(item[0]))
+      });
+
+      let circles = map.selectAll("circle.point").data(filteredTreeData)
+                              .join("circle")
+                              .attr("class", "point")
+                              .attr("opacity", 0.7)
+                              .attr("cx", d => projection([parseFloat(d.Longitude) , parseFloat(d.Latitude)])[0])
+                              .attr("cy", d => projection([parseFloat(d.Longitude) , parseFloat(d.Latitude)])[1])
+                              .attr("r", 1.5)
+                              .attr("fill", d => colorScale(d.qSpecies) ); 
+
+    requestBar(speciesList, colorScale);
+    requestTrees(sf, filteredTreeData, speciesList, colorScale);
+
+    };
+
+    function requestBar (speciesList, colorScale) {
+
+      console.log("BAR CHART")
+
+      const svg = d3.select("#barChart")
+      const width = svg.attr("width");
+      const height = svg.attr("height");
+      const margins = { top: 10, right: 20, bottom: 80, left:50};
+      const chartWidth = width - margins.left - margins.right;
+      const chartHeight = height - margins.top - margins.bottom;
+      let annotations = svg.append("g").attr("id","annotations");
+
+      let chartArea = svg.append("g")
+                    .attr("transform","translate("+margins.left+","+margins.top+")")
+                    .attr("class", "chartBackground");
+
+      var vals = Object.keys(speciesList).map(function(key){
+        return speciesList[key][1];
+      });
+      var keys = Object.keys(speciesList).map(function(key){
+        return speciesList[key][0];
+      });
+
+      let xScale = d3.scaleBand().domain(keys).range([0, chartWidth]);
+      let yScale = d3.scaleLinear().domain([800, d3.extent(vals)[1] + 170]).range([chartHeight, 0]); 
+
+      console.log(d3.extent(vals)[0])
+      let leftAxis = d3.axisLeft(yScale);
+      let leftGridlines= d3.axisLeft(yScale)
+                          .tickSize(-chartWidth-10)
+                          .tickFormat('');
+      annotations.append("g")
+        .attr("class", "y axis")
+        .attr("transform",`translate(${margins.left-10},${margins.top})`)
+        .call(leftAxis)
+
+      annotations.append("g")
+        .attr("class", "y gridlines")
+        .attr("transform",`translate(${margins.left-10},${margins.top})`)
+        .call(leftGridlines);
+
+      let bottomAxis = d3.axisBottom(xScale);
+      let bottomGridlines = d3.axisBottom(xScale)
+                            .tickSize(-chartHeight-10)
+                            .tickFormat('');
+
+      annotations.append('g')
+                    .attr('class', 'x axis')
+                    .attr('transform',`translate(${margins.left},${chartHeight+margins.top+10})`)
+                    .call(bottomAxis)
+                    .selectAll("text")  
+                    .style("text-anchor", "center")
+                    // .attr("dx", "1em")
+                    .attr("dy", "2em")
+                    .attr("transform", "rotate(-15)");
+
+      annotations.append('g').attr('class', 'x gridlines') 
+            .attr('transform',`translate(${margins.left},${chartHeight+margins.top+10})`)
+            .call(bottomGridlines);
+
+      Object.keys(speciesList).map(function(key){
+        var xPt = speciesList[key][0] 
+        console.log(xPt)
+        var yPt = speciesList[key][1]
+        chartArea.append("line")
+        .attr("x1",xScale( xPt ) + 45)
+        .attr("x2",xScale( xPt )+ 45)
+        .attr("y1",chartHeight)  
+        .attr("y2",yScale( yPt))
+        .style("stroke", colorScale(xPt) )
+        .style("stroke-width", 40);
+      });      
+    };
+
+  function requestTrees(sf, treeData, speciesList, colorScale) {
+    console.log("BY NEIGH")
+    const mapsvgneigh = d3.select("#byNeighborhood");
+    const mapNeigh = mapsvgneigh.append("g")
+                    .attr("transform","translate("+mapMargin.left+","+mapMargin.top+")");
+
+    var neighborhoods = topojson.feature(sf, sf.objects.SFNeighborhoods);     // List of neighborhoods outlines to fill
+    var neighborhoodsMesh = topojson.mesh(sf, sf.objects.SFNeighborhoods);    // 'Mesh' of all outlines put together for a stroke
+    var projection = d3.geoAlbersUsa().fitSize([mapAreaWidth, mapAreaHeight], neighborhoods);
+    var path = d3.geoPath().projection(projection);
+
+    mapNeigh.selectAll("path.state").data(neighborhoods.features)
+      .join("path")
+      .attr("class", "neighborhood")
+      .attr("note", d => d.id)
+      .attr("d", path);
+      
+    mapNeigh.append("path").datum(neighborhoodsMesh)
+      .attr("class","outline")
+      .attr("d", path);
+      
+    // let circles = mapNeigh.selectAll("circle.point").data(treeData)
+    //                         .join("circle")
+    //                         .attr("class", "point")
+    //                         .attr("opacity", 0.8)
+    //                         .attr("cx", d => projection([parseFloat(d.Longitude) , parseFloat(d.Latitude)])[0])
+    //                         .attr("cy", d => projection([parseFloat(d.Longitude) , parseFloat(d.Latitude)])[1])
+    //                         .attr("r", 1)
+    //                         .attr("fill", d => 'green'); 
+
+
+    let neighborhoodsTreeCounts = {}; 
+    let neighborhoodPolygons = {};
+    let treePointList = [];
+
+    neighborhoods.features.forEach( neighborhood =>{
+      neighborhoodPolygons[neighborhood.properties.name] = neighborhood.geometry;
+    })
+    console.log(neighborhoodPolygons)
+
+    let neighborhoodNames = Object.keys(neighborhoodPolygons)
+
+    treeData.forEach( row => {
+      let tree_point = projection([parseFloat(row.Longitude) , parseFloat(row.Latitude)]);
+      treePointList.push(tree_point);
+      for (const [name, polygon] of Object.entries(neighborhoodPolygons)) {
+        console.log(polygon.coordinates)
+        // console.log(d3.polygonContains(polygon.coordinates,[tree_point]))
+        // if (d3.polygonContains(polygon.coordinates,[tree_point])){
+        //   console.log("yay")
+        // }
+    }
+    });
+
+    
+    // for (const [name, polygon] of Object.entries(neighborhoodPolygons)) {
+    //   // console.log(polygon.coordinates)
+    //   treeData.forEach( row => {
+    //   var tree_point = projection([parseFloat(row.Longitude) , parseFloat(row.Latitude)])
+    //   console.log(d3.polygonContains(polygon.coordinates, tree_point));
+    //     if (d3.polygonContains(polygon.coordinates, tree_point)){
+    //       var index = treePointList.indexOf(tree_point);
+    //         if (index !== -1) {
+    //           treePointList.splice(index, 1);
+    //         }
+    //         if (name in neighborhoodsTreeCounts){
+    //           var value = neighborhoodsTreeCounts.get(name)
+    //           const newObj = Object.assign({}, neighborhoodsTreeCounts, {name : value + 1});
+    //         }
+    //         else{
+    //           neighborhoodsTreeCounts.name = 1
+    //         }
+    //     }
+    //   }
+    //   )
+    // }
+  };
+    requestTreeMap();
+    
+  </script>
+
+
+  </body>
+</html>
