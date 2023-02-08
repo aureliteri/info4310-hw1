@@ -17,10 +17,10 @@
       }
       
       .neighborhood {
-        fill: rgb(249, 248, 248);
+        fill: rgb(0, 0, 0);
       }
       .outline {
-        stroke: black;
+        stroke: rgb(246, 246, 246);
         stroke-width: 1px;
         fill: none;
       }
@@ -46,7 +46,7 @@
   </div>
   <h5> Bar Chart of Top 11 Tree Species in San Francisco</h5>
   <svg id="barChart" height="600" width="1100"></svg>
-
+  <h3> Line Charts of Top 3 Tree Species in San Francisco: # of Trees vs Year</h3>
   <svg id="lineplot0" height="500" width="800" ></svg>
   <svg id="lineplot1" height="500" width="800" style="margin-top:50px" ></svg>
   <svg id="lineplot2" height="500" width="800" style="margin-top:50px" ></svg>
@@ -126,7 +126,6 @@
       });
       
       const turbo = ["#900f00", "#ba2208", "#fe4b83", "#f65f18", "#ffa423", "#dedd32", "#95fb51", "#4df884", "#27d7c4", "#2f9df5", "#6e40aa", "#23171b"]
-      // const colors = [,,,"#ff7847","#e2b72f","#aff05b","#52f667","#1ddfa3","#23abd8","#4c6edb","#6e40aa"]
 
       const colorScale = d3.scaleOrdinal()
                           .domain(Array.from(filteredTreeData))
@@ -258,7 +257,6 @@
     });
 
     for (i = 0; i<3; i++){
-      // console.log(speciesList[1])
       const speciesName = speciesList[i][0]
       makeLineChart(speciesName, i, treeData, colorScale)
     }
