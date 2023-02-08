@@ -47,7 +47,9 @@
   <h5> Bar Chart of Top 11 Tree Species in San Francisco</h5>
   <svg id="barChart" height="600" width="1100"></svg>
 
-  <svg id="lineplot" height="500" width="800" style="margin-top:50px" ></svg>
+  <svg id="lineplot0" height="500" width="800" ></svg>
+  <svg id="lineplot1" height="500" width="800" style="margin-top:50px" ></svg>
+  <svg id="lineplot2" height="500" width="800" style="margin-top:50px" ></svg>
 
   <script id="treemap">
     const mapsvg = d3.select("#choropleth");
@@ -83,21 +85,11 @@
       
       var treeData = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
       console.log(treeData)
+
       var filteredTreeData = [];
-
-      let neighborhoodPolygons = {};
-      let treePointList = [];
-
-      neighborhoods.features.forEach( neighborhood =>{
-        neighborhoodPolygons[neighborhood.properties.name] = neighborhood.geometry;
-      })
-
-      let neighborhoodNames = Object.keys(neighborhoodPolygons)
       var treeSpeciesRow = {}
       
       treeData.forEach( row => {
-        let tree_point = projection([parseFloat(row.Longitude) , parseFloat(row.Latitude)]);
-        treePointList.push(tree_point);
         row['qSpecies'] = row['qSpecies'].split('::')[1]
         var species = row['qSpecies']
         if (species in treeSpeciesRow ){
@@ -108,7 +100,6 @@
           treeSpeciesRow[species] = 1
         }
       });
-      console.log(Object.keys(treeSpeciesRow).length)
 
       Object.keys(treeSpeciesRow).forEach(function(key) {
           if (treeSpeciesRow[key] < 785){
@@ -122,7 +113,6 @@
       speciesList.sort(function(first, second) {
         return second[1] - first[1];
       });
-      console.log(speciesList)
 
       treeData.forEach( row => {
         var temp_dict = {}
@@ -143,7 +133,6 @@
                           .range(turbo);
 
       speciesList.forEach(item => {   
-        console.log(item)    
         d3.select("#colorLegend")
         .append("span")
         .style("fill", "#000")
@@ -161,13 +150,10 @@
                               .attr("fill", d => colorScale(d.qSpecies) ); 
 
     requestBar(speciesList, colorScale);
-    requestTrees(sf, filteredTreeData, speciesList, colorScale);
+    requestTimeLine(colorScale)
     };
 
     function requestBar (speciesList, colorScale) {
-
-      console.log("BAR CHART")
-
       const svg = d3.select("#barChart")
       const width = svg.attr("width");
       const height = svg.attr("height");
@@ -190,7 +176,6 @@
       let xScale = d3.scaleBand().domain(keys).range([0, chartWidth]);
       let yScale = d3.scaleLinear().domain([800, d3.extent(vals)[1] + 170]).range([chartHeight, 0]); 
 
-      console.log(d3.extent(vals)[0])
       let leftAxis = d3.axisLeft(yScale);
       let leftGridlines= d3.axisLeft(yScale)
                           .tickSize(-chartWidth-10)
@@ -225,7 +210,6 @@
 
       Object.keys(speciesList).map(function(key){
         var xPt = speciesList[key][0] 
-        console.log(xPt)
         var yPt = speciesList[key][1]
         chartArea.append("line")
         .attr("x1",xScale( xPt ) + 45)
@@ -244,52 +228,139 @@
       });      
     };
 
-    const requestTimeLine = async function() {
+    const requestTimeLine = async function(colorScale) {
     var treeData = await d3.csv("Street_Tree_List-2022-01-30_FILTERED.csv", d3.autotype);
     console.log(treeData)
-
-    const svg = d3.select("svg#lineplot");
-    const width = svg.attr("width");
-    const height = svg.attr("height");
-    const margins = {top: 10, right: 10, bottom: 50, left: 50};
-    const chartWidth = width - margins.left - margins.right;
-    const chartHeight = height - margins.top - margins.bottom;
-
-    let annotations = svg.append("g").attr("id","annotations");
-    let chartArea = svg.append("g").attr("id","points")
-                    .attr("transform",`translate(${margins.left},${margins.top})`);
-
-    
-    const timeParser = d3.timeParse("%m/%d/%Y");
-    treeData.forEach( d => {
-      if (d["PlantDate"] != null && d["PlantDate"] != ""){
-        let splitText = d["PlantDate"].split(" ")
-        splitText = splitText[0]
-        splitText = splitText.split("/")
-        if (splitText[0].length == 1 ){
-          splitText[0] = "0"+splitText[0]
-        }
-        if (splitText[1].length == 1 ){
-          splitText[1] = "0"+splitText[1]
-        }
-        if (parseInt(splitText[2]) >=55){
-          splitText[2] = "19"+splitText[2]
-        }
-        else if (parseInt(splitText[2]) >= 0 && parseInt(splitText[2])<55){
-          splitText[2] = "20"+splitText[2]
-        }
-        let date = splitText.join('/')
-        d['date'] = timeParser(date);
-        d['year'] = d['date'].getFullYear()
-
-        console.log(d["year"])
+    let treeSpeciesRow = {}
+    treeData.forEach( row => {
+      row['qSpecies'] = row['qSpecies'].split('::')[1]
+      var species = row['qSpecies']
+      if (species in treeSpeciesRow ){
+        var val = treeSpeciesRow[species]
+        treeSpeciesRow[species] = val + 1
+      }
+      else {
+        treeSpeciesRow[species] = 1
       }
     });
 
+    Object.keys(treeSpeciesRow).forEach(function(key) {
+        if (treeSpeciesRow[key] < 800){
+          delete treeSpeciesRow[key]
+        }
+    });
+    var speciesList = Object.keys(treeSpeciesRow).map(function(key) {
+      return [key, treeSpeciesRow[key]];
+    });
+
+    speciesList.sort(function(first, second) {
+      return second[1] - first[1];
+    });
+
+    for (i = 0; i<3; i++){
+      // console.log(speciesList[1])
+      const speciesName = speciesList[i][0]
+      makeLineChart(speciesName, i, treeData, colorScale)
+    }
 
     };
+    function makeLineChart(speciesName, index, treeData, colorScale){
+      const svgName = "svg#lineplot"+index
+      console.log(svgName)
+      const svg = d3.select(svgName);
+      const width = svg.attr("width");
+      const height = svg.attr("height");
+      const margins = {top: 40, right: 10, bottom: 50, left: 50};
+      const chartWidth = width - margins.left - margins.right;
+      const chartHeight = height - margins.top - margins.bottom;
+
+      let annotations = svg.append("g").attr("id","annotations");
+      let chartArea = svg.append("g").attr("id","points")
+                      .attr("transform",`translate(${margins.left},${margins.top})`);
+
+      let treeCount = {}
+      const timeParser = d3.timeParse("%m/%d/%Y");
+      treeData.forEach( d => {
+        var species = d['qSpecies']
+        if (d["PlantDate"] != null && d["PlantDate"] != "" && species == speciesName){
+          let splitText = d["PlantDate"].split(" ")
+          splitText = splitText[0]
+          splitText = splitText.split("/")
+          if (parseInt(splitText[2]) >=55){
+            splitText[2] = "19"+splitText[2]
+          }
+          else if (parseInt(splitText[2]) >= 0 && parseInt(splitText[2])<55){
+            splitText[2] = "20"+splitText[2]
+          }
+          d['year'] = Number(splitText[2])
+          var treeYear = d['year']
+          if (treeCount[treeYear] != null && speciesName == species){
+            var val = treeCount[treeYear]
+            treeCount[treeYear] = val + 1
+          }
+          else if (speciesName == species){
+            treeCount[treeYear] = 1
+          }        
+        }
+      });
+
+      var values = Object.keys(treeCount).map(function(key){
+      return treeCount[key];
+      });
+      var keysInt = Object.keys(treeCount).map(function(key){
+      return parseInt(key);
+      });
+
+      const num = d3.extent(values);
+      const amountScale = d3.scaleLinear().domain(num).range([chartHeight, 0]);
+      const dateExtent = d3.extent(keysInt);
+      const dateScale = d3.scaleLinear().domain(dateExtent).range([0,chartWidth]);
+      console.log(dateExtent)
+
+      let leftAxis = d3.axisLeft(amountScale)
+      let leftGridlines = d3.axisLeft(amountScale)
+                            .tickSize(-chartWidth-10)
+                            .tickFormat("")
+      annotations.append("g")
+        .attr("class", "y axis")
+        .attr("transform",`translate(${margins.left-10},${margins.top})`)
+        .call(leftAxis)
+      annotations.append("g")
+        .attr("class", "y gridlines")
+        .attr("transform",`translate(${margins.left-10},${margins.top})`)
+        .call(leftGridlines);
+
+      let bottomAxis = d3.axisBottom(dateScale)
+                        .tickFormat(d3.format("d"))
+
+      let bottomGridlines = d3.axisBottom(dateScale)
+                              .tickSize(-chartHeight-10)
+                              .tickFormat('')
+      annotations.append("g")
+        .attr("class", "x axis")
+        .attr("transform",`translate(${margins.left},${chartHeight+margins.top+10})`)
+        .call(bottomAxis);
+      annotations.append("g")
+        .attr("class", "x gridlines")
+        .attr("transform",`translate(${margins.left},${chartHeight+margins.top+10})`)
+        .call(bottomGridlines);
+      
+      var lineGen = d3.line()
+                    .x( d =>  dateScale(parseInt(d)) )
+                    .y( d => amountScale(treeCount[d]) )
+                    .curve(d3.curveMonotoneX);  
+
+      chartArea.append("path")
+              .datum(Object.keys(treeCount))
+              .attr("class", "line")
+              .attr("fill", "none")
+              .attr("stroke", d=> colorScale(speciesName))
+              .attr("stroke-width", 3)
+              .attr("d", lineGen);
+      let title = "Number of "+speciesName + ' Species Trees Planted';
+      svg.append('text').text(title).attr('x', 20).attr('y', 20);
+    }
     requestTreeMap();
-    requestTimeLine();
   </script>
 
 
