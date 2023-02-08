@@ -33,7 +33,6 @@
 
 <body>
   <h3>INFO 4310 HW 1</h3>
-  <h3>Amy Ouyang (aco49)</h3>
   <div class = "center">
     
     <h3>Popular San Francisco Tree Species</h3>
@@ -44,7 +43,7 @@
     <p>Species (# of trees)</p>
     <div id="colorLegend"></div>
   </div>
-  <h5> Bar Chart of Top 11 Tree Species in San Francisco</h5>
+  <h5> Bar Chart of Top 11 Tree Species in San Francisco: # of Trees vs Tree Species</h5>
   <svg id="barChart" height="600" width="1100"></svg>
   <h3> Line Charts of Top 3 Tree Species Planted Over Time in San Francisco: # of Trees vs Year</h3>
   <svg id="lineplot0" height="500" width="800" ></svg>
@@ -172,7 +171,7 @@
       });
 
       let xScale = d3.scaleBand().domain(keys).range([0, chartWidth]);
-      let yScale = d3.scaleLinear().domain([800, d3.extent(vals)[1] + 170]).range([chartHeight, 0]); 
+      let yScale = d3.scaleLinear().domain([600, d3.extent(vals)[1] + 170]).range([chartHeight, 0]); 
 
       let leftAxis = d3.axisLeft(yScale);
       let leftGridlines= d3.axisLeft(yScale)
